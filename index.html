@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Генератор календаря для соцмереж</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .calendar-day {
+      transition: all 0.15s ease;
+      min-height: 58px;
+    }
+    .calendar-day:hover {
+      transform: scale(1.05);
+      z-index: 10;
+    }
+    .event-day {
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+      border: 2px solid rgba(255, 255, 255, 0.7);
+    }
+    /* Число місяця — маленьке */
+    .event-day-number {
+      font-size: 10px;
+      font-weight: 500;
+      opacity: 0.8;
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+    /* Текст події (години) — великий і головний */
+    .event-label {
+      font-size: 12px;
+      line-height: 1.25;
+      font-weight: 600;
+      word-break: break-word;
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+      padding: 0 2px;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div class="flex flex-col lg:flex-row h-screen">
+    <!-- LEFT PANEL -->
+    <div class="w-full lg:w-96 bg-white border-r border-gray-200 p-6 overflow-y-auto">
+      <h1 class="text-xl font-bold text-gray-800 mb-1">Генератор календаря</h1>
+      <p class="text-sm text-gray-500 mb-6">для соцмереж</p>
+
+      <!-- Month & Year -->
+      <div class="mb-6">
+        <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Місяць і рік</h2>
+        <div class="flex gap-3">
+          <div class="flex-1">
+            <label class="block text-xs text-gray-500 mb-1">Місяць</label>
+            <select id="month" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="0">Січень</option>
+              <option value="1">Лютий</option>
+              <option value="2">Березень</option>
+              <option value="3">Квітень</option>
+              <option value="4">Травень</option>
+              <option value="5">Червень</option>
+              <option value="6">Липень</option>
+              <option value="7">Серпень</option>
+              <option value="8">Вересень</option>
+              <option value="9">Жовтень</option>
+              <option value="10">Листопад</option>
+              <option value="11">Грудень</option>
+            </select>
+          </div>
+          <div class="w-28">
+            <label class="block text-xs text-gray-500 mb-1">Рік</label>
+            <input type="number" id="year" value="2026" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Titles -->
+      <div class="mb-6">
+        <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Підписи</h2>
+        <div class="mb-3">
+          <label class="block text-xs text-gray-500 mb-1">Заголовок (порожньо = місяць і рік)</label>
+          <input type="text" id="title" placeholder="напр. ВЕРЕСЕНЬ 2026" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Текст знизу</label>
+          <textarea id="footer" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Приймаю за адресою:&#10;м. Київ, вул. Дніпровська набережна, буд. 25"></textarea>
+        </div>
+      </div>
+
+      <!-- Background -->
+      <div class="mb-6">
+        <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Фон картки</h2>
+        <div class="flex gap-2 mb-4">
+          <button id="btn-gradient" class="flex-1 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white">Градієнт</button>
+          <button id="btn-solid" class="flex-1 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700">Один колір</button>
+        </div>
+
+        <div id="gradient-controls">
+          <div class="flex gap-3 mb-3">
+            <div class="flex items-center gap-2">
+              <input type="color" id="color1" value="#4C8FE0" class="w-10 h-10 rounded-lg cursor-pointer border-0" />
+              <span class="text-xs text-gray-500" id="color1-hex">#4C8FE0</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="color" id="color2" value="#7AD0B0" class="w-10 h-10 rounded-lg cursor-pointer border-0" />
+              <span class="text-xs text-gray-500" id="color2-hex">#7AD0B0</span>
+            </div>
+          </div>
+          <div class="mb-3">
+            <div class="flex justify-between text-xs text-gray-500 mb-1">
+              <span>Кут градієнта</span>
+              <span id="angle-value">135°</span>
+            </div>
+            <input type="range" id="angle" min="0" max="360" value="135" class="w-full accent-blue-600" />
+          </div>
+        </div>
+
+        <div id="solid-controls" class="hidden mb-3">
+          <div class="flex items-center gap-2">
+            <input type="color" id="solid-color" value="#4C8FE0" class="w-10 h-10 rounded-lg cursor-pointer border-0" />
+            <span class="text-xs text-gray-500" id="solid-hex">#4C8FE0</span>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <div class="flex justify-between text-xs text-gray-500 mb-1">
+            <span>Прозорість фону</span>
+            <span id="opacity-value">88%</span>
+          </div>
+          <input type="range" id="opacity" min="30" max="100" value="88" class="w-full accent-blue-600" />
+        </div>
+
+        <div>
+          <div class="flex justify-between text-xs text-gray-500 mb-1">
+            <span>Заокруглення кутів</span>
+            <span id="radius-value">28px</span>
+          </div>
+          <input type="range" id="radius" min="0" max="48" value="28" class="w-full accent-blue-600" />
+        </div>
+      </div>
+
+      <!-- Event Groups -->
+      <div class="mb-6">
+        <h2 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Групи подій</h2>
+        <p class="text-xs text-gray-500 mb-3">Події з однаковою назвою мають однаковий колір.</p>
+        <div id="event-groups" class="space-y-2"></div>
+        <p id="no-groups" class="text-xs text-gray-400 italic">Поки немає подій</p>
+      </div>
+
+      <div class="mb-4 p-3 bg-blue-50 rounded-lg text-xs text-blue-700">
+        <strong>Події:</strong> клікни по даті → введи години (наприклад «08:00 - 15:00»). Однакові години = одна група + один колір.
+      </div>
+
+      <div class="mb-4 p-3 bg-green-50 rounded-lg text-xs text-green-700">
+        ✓ Усе автоматично зберігається.
+      </div>
+
+      <button id="download-btn" class="w-full py-3 bg-gray-900 text-white rounded-xl font-medium hover:bg-gray-800 transition">
+        Завантажити PNG
+      </button>
+
+      <button id="reset-btn" class="w-full mt-2 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition">
+        Скинути все
+      </button>
+    </div>
+
+    <!-- RIGHT PREVIEW -->
+    <div class="flex-1 bg-gray-50 flex items-center justify-center p-8 relative overflow-auto">
+      <div class="absolute top-6 left-1/2 -translate-x-1/2 bg-white px-4 py-1.5 rounded-full text-sm font-medium text-gray-600 shadow-sm border">
+        Попередній перегляд
+      </div>
+
+      <div id="calendar-card" class="w-full max-w-md shadow-2xl overflow-hidden" style="border-radius: 28px;">
+        <div id="calendar-inner" class="p-6 relative">
+          <h2 id="card-title" class="text-center text-white text-2xl font-bold tracking-wide mb-5 drop-shadow-sm">
+            ВЕРЕСЕНЬ 2026
+          </h2>
+
+          <div class="grid grid-cols-7 gap-1.5 mb-2 text-center text-xs font-medium text-white/80">
+            <div>ПН</div><div>ВТ</div><div>СР</div><div>ЧТ</div><div>ПТ</div><div>СБ</div><div>НД</div>
+          </div>
+
+          <div id="days-grid" class="grid grid-cols-7 gap-1.5"></div>
+
+          <div id="card-footer" class="mt-6 text-center text-white/90 text-sm leading-snug"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="event-modal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl p-6 w-80 shadow-xl">
+      <h3 class="font-semibold text-gray-800 mb-1">Подія на <span id="modal-date"></span></h3>
+      <input type="text" id="event-text" placeholder="Наприклад: 08:00 - 15:00" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mt-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      <div class="flex gap-2 mt-4">
+        <button id="save-event" class="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">Зберегти</button>
+        <button id="clear-event" class="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">Очистити</button>
+        <button id="close-modal" class="px-3 py-2 text-gray-500 text-sm">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const monthNames = [
+      'СІЧЕНЬ', 'ЛЮТИЙ', 'БЕРЕЗЕНЬ', 'КВІТЕНЬ', 'ТРАВЕНЬ', 'ЧЕРВЕНЬ',
+      'ЛИПЕНЬ', 'СЕРПЕНЬ', 'ВЕРЕСЕНЬ', 'ЖОВТЕНЬ', 'ЛИСТОПАД', 'ГРУДЕНЬ'
+    ];
+
+    const STORAGE_KEY = 'calendar-generator-v2';
+
+    const COLOR_PALETTE = [
+      '#6366F1', '#D97706', '#8B5CF6', '#059669', '#DC2626',
+      '#2563EB', '#DB2777', '#0D9488', '#CA8A04', '#7C3AED'
+    ];
+
+    let state = {
+      month: 8,
+      year: 2026,
+      title: '',
+      footer: 'Приймаю за адресою:\nм. Київ, вул. Дніпровська набережна, буд. 25',
+      isGradient: true,
+      color1: '#4C8FE0',
+      color2: '#7AD0B0',
+      solidColor: '#4C8FE0',
+      angle: 135,
+      opacity: 88,
+      radius: 28,
+      events: {},
+      eventColors: {}
+    };
+
+    let currentDayKey = null;
+    let colorIndex = 0;
+
+    const monthSelect = document.getElementById('month');
+    const yearInput = document.getElementById('year');
+    const titleInput = document.getElementById('title');
+    const footerInput = document.getElementById('footer');
+    const color1 = document.getElementById('color1');
+    const color2 = document.getElementById('color2');
+    const solidColor = document.getElementById('solid-color');
+    const angle = document.getElementById('angle');
+    const opacity = document.getElementById('opacity');
+    const radius = document.getElementById('radius');
+    const daysGrid = document.getElementById('days-grid');
+    const cardTitle = document.getElementById('card-title');
+    const cardFooter = document.getElementById('card-footer');
+    const calendarInner = document.getElementById('calendar-inner');
+    const calendarCard = document.getElementById('calendar-card');
+    const eventGroupsEl = document.getElementById('event-groups');
+    const noGroupsEl = document.getElementById('no-groups');
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          state = { ...state, ...parsed };
+        }
+      } catch (e) {
+        console.warn('Не вдалося завантажити', e);
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        console.warn('Не вдалося зберегти', e);
+      }
+    }
+
+    function applyStateToUI() {
+      monthSelect.value = state.month;
+      yearInput.value = state.year;
+      titleInput.value = state.title;
+      footerInput.value = state.footer;
+      color1.value = state.color1;
+      color2.value = state.color2;
+      solidColor.value = state.solidColor;
+      angle.value = state.angle;
+      opacity.value = state.opacity;
+      radius.value = state.radius;
+
+      document.getElementById('color1-hex').textContent = state.color1.toUpperCase();
+      document.getElementById('color2-hex').textContent = state.color2.toUpperCase();
+      document.getElementById('solid-hex').textContent = state.solidColor.toUpperCase();
+
+      if (state.isGradient) {
+        document.getElementById('btn-gradient').className = 'flex-1 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white';
+        document.getElementById('btn-solid').className = 'flex-1 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700';
+        document.getElementById('gradient-controls').classList.remove('hidden');
+        document.getElementById('solid-controls').classList.add('hidden');
+      } else {
+        document.getElementById('btn-solid').className = 'flex-1 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white';
+        document.getElementById('btn-gradient').className = 'flex-1 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700';
+        document.getElementById('gradient-controls').classList.add('hidden');
+        document.getElementById('solid-controls').classList.remove('hidden');
+      }
+    }
+
+    function getOrCreateColor(eventName) {
+      if (state.eventColors[eventName]) return state.eventColors[eventName];
+      const color = COLOR_PALETTE[colorIndex % COLOR_PALETTE.length];
+      colorIndex++;
+      state.eventColors[eventName] = color;
+      return color;
+    }
+
+    function renderEventGroups() {
+      const uniqueNames = Object.keys(state.eventColors);
+      eventGroupsEl.innerHTML = '';
+
+      if (uniqueNames.length === 0) {
+        noGroupsEl.classList.remove('hidden');
+        return;
+      }
+      noGroupsEl.classList.add('hidden');
+
+      uniqueNames.forEach(name => {
+        const color = state.eventColors[name];
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-3 p-2 bg-gray-50 rounded-lg';
+        row.innerHTML = `
+          <input type="color" value="${color}" data-name="${name}" class="w-9 h-9 rounded-lg cursor-pointer border-0 group-color-input" />
+          <span class="text-sm text-gray-700 flex-1 truncate" title="${name}">${name}</span>
+        `;
+        eventGroupsEl.appendChild(row);
+      });
+
+      document.querySelectorAll('.group-color-input').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const name = e.target.dataset.name;
+          state.eventColors[name] = e.target.value;
+          updateAll();
+          saveState();
+        });
+      });
+    }
+
+    function init() {
+      loadState();
+      colorIndex = Object.keys(state.eventColors).length;
+      applyStateToUI();
+
+      const inputs = [monthSelect, yearInput, titleInput, footerInput, color1, color2, solidColor, angle, opacity, radius];
+      inputs.forEach(el => el.addEventListener('input', () => {
+        updateStateFromUI();
+        updateAll();
+        saveState();
+      }));
+
+      document.getElementById('btn-gradient').addEventListener('click', () => {
+        state.isGradient = true;
+        applyStateToUI();
+        updateAll();
+        saveState();
+      });
+
+      document.getElementById('btn-solid').addEventListener('click', () => {
+        state.isGradient = false;
+        applyStateToUI();
+        updateAll();
+        saveState();
+      });
+
+      color1.addEventListener('input', () => document.getElementById('color1-hex').textContent = color1.value.toUpperCase());
+      color2.addEventListener('input', () => document.getElementById('color2-hex').textContent = color2.value.toUpperCase());
+      solidColor.addEventListener('input', () => document.getElementById('solid-hex').textContent = solidColor.value.toUpperCase());
+
+      document.getElementById('save-event').addEventListener('click', saveEvent);
+      document.getElementById('clear-event').addEventListener('click', clearEvent);
+      document.getElementById('close-modal').addEventListener('click', closeModal);
+      document.getElementById('event-modal').addEventListener('click', e => {
+        if (e.target.id === 'event-modal') closeModal();
+      });
+
+      document.getElementById('download-btn').addEventListener('click', downloadPNG);
+      document.getElementById('reset-btn').addEventListener('click', resetAll);
+
+      updateAll();
+    }
+
+    function updateStateFromUI() {
+      state.month = parseInt(monthSelect.value);
+      state.year = parseInt(yearInput.value) || 2026;
+      state.title = titleInput.value;
+      state.footer = footerInput.value;
+      state.color1 = color1.value;
+      state.color2 = color2.value;
+      state.solidColor = solidColor.value;
+      state.angle = parseInt(angle.value);
+      state.opacity = parseInt(opacity.value);
+      state.radius = parseInt(radius.value);
+    }
+
+    function updateAll() {
+      document.getElementById('angle-value').textContent = state.angle + '°';
+      document.getElementById('opacity-value').textContent = state.opacity + '%';
+      document.getElementById('radius-value').textContent = state.radius + 'px';
+
+      const customTitle = state.title.trim();
+      cardTitle.textContent = customTitle || `${monthNames[state.month]} ${state.year}`;
+      cardFooter.innerHTML = state.footer.replace(/\n/g, '<br>') || '';
+
+      const op = state.opacity / 100;
+      calendarCard.style.borderRadius = state.radius + 'px';
+
+      if (state.isGradient) {
+        const c1 = hexToRgba(state.color1, op);
+        const c2 = hexToRgba(state.color2, op);
+        calendarInner.style.background = `linear-gradient(${state.angle}deg, ${c1}, ${c2})`;
+      } else {
+        calendarInner.style.background = hexToRgba(state.solidColor, op);
+      }
+
+      renderCalendar(state.month, state.year);
+      renderEventGroups();
+    }
+
+    function hexToRgba(hex, alpha) {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r},${g},${b},${alpha})`;
+    }
+
+    function renderCalendar(month, year) {
+      daysGrid.innerHTML = '';
+
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const daysInMonth = lastDay.getDate();
+
+      let startDay = firstDay.getDay() - 1;
+      if (startDay < 0) startDay = 6;
+
+      const prevMonthLast = new Date(year, month, 0).getDate();
+      for (let i = startDay - 1; i >= 0; i--) {
+        daysGrid.appendChild(createDayCell(prevMonthLast - i, true, null));
+      }
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const key = `${year}-${month + 1}-${d}`;
+        daysGrid.appendChild(createDayCell(d, false, key));
+      }
+
+      const totalCells = daysGrid.children.length;
+      const remaining = Math.max(0, 42 - totalCells);
+      for (let d = 1; d <= remaining; d++) {
+        daysGrid.appendChild(createDayCell(d, true, null));
+      }
+    }
+
+    function createDayCell(day, isOther, key) {
+      const div = document.createElement('div');
+      const eventName = key ? state.events[key] : null;
+      const hasEvent = !!eventName;
+
+      if (isOther) {
+        div.className = 'calendar-day rounded-xl flex flex-col items-center justify-center text-sm font-medium text-white/35 bg-white/10';
+        div.innerHTML = `<span>${String(day).padStart(2, '0')}</span>`;
+      } else if (hasEvent) {
+        const bgColor = getOrCreateColor(eventName);
+        div.className = 'calendar-day event-day rounded-xl flex flex-col items-center justify-center text-white cursor-pointer';
+        div.style.backgroundColor = bgColor;
+        // Число маленьке зверху, години великі знизу
+        div.innerHTML = `
+          <span class="event-day-number">${String(day).padStart(2, '0')}</span>
+          <span class="event-label">${eventName}</span>
+        `;
+        div.addEventListener('click', () => openModal(key, day));
+      } else {
+        div.className = 'calendar-day rounded-xl flex flex-col items-center justify-center text-sm font-medium text-white bg-white/20 hover:bg-white/30 cursor-pointer';
+        div.innerHTML = `<span>${String(day).padStart(2, '0')}</span>`;
+        div.addEventListener('click', () => openModal(key, day));
+      }
+
+      return div;
+    }
+
+    function openModal(key, day) {
+      currentDayKey = key;
+      document.getElementById('modal-date').textContent = day;
+      document.getElementById('event-text').value = state.events[key] || '';
+      document.getElementById('event-modal').classList.remove('hidden');
+      document.getElementById('event-text').focus();
+    }
+
+    function saveEvent() {
+      const text = document.getElementById('event-text').value.trim();
+      if (text) {
+        state.events[currentDayKey] = text;
+        getOrCreateColor(text);
+      } else {
+        delete state.events[currentDayKey];
+      }
+      cleanupUnusedColors();
+      closeModal();
+      updateAll();
+      saveState();
+    }
+
+    function clearEvent() {
+      delete state.events[currentDayKey];
+      cleanupUnusedColors();
+      closeModal();
+      updateAll();
+      saveState();
+    }
+
+    function cleanupUnusedColors() {
+      const used = new Set(Object.values(state.events));
+      Object.keys(state.eventColors).forEach(name => {
+        if (!used.has(name)) delete state.eventColors[name];
+      });
+    }
+
+    function closeModal() {
+      document.getElementById('event-modal').classList.add('hidden');
+      currentDayKey = null;
+    }
+
+    function resetAll() {
+      if (!confirm('Скинути всі налаштування та події?')) return;
+      localStorage.removeItem(STORAGE_KEY);
+      location.reload();
+    }
+
+    async function downloadPNG() {
+      const btn = document.getElementById('download-btn');
+      btn.textContent = 'Генеруємо...';
+      btn.disabled = true;
+      try {
+        const canvas = await html2canvas(calendarCard, {
+          scale: 2,
+          backgroundColor: null,
+          useCORS: true
+        });
+        const link = document.createElement('a');
+        link.download = `calendar-${state.year}-${state.month + 1}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } catch (e) {
+        alert('Помилка при створенні зображення');
+        console.error(e);
+      }
+      btn.textContent = 'Завантажити PNG';
+      btn.disabled = false;
+    }
+
+    init();
+  </script>
+</body>
+</html>
